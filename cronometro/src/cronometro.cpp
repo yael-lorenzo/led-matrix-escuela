@@ -13,6 +13,7 @@ int brillo = 10; //  Brillo de los LEDS , más alto mas brillo ideal 10
 int nleds=256;  // num de LEDs
 int retardo=2000; // Tiempo entre imagenes de 2 segundos
 int rows=16;
+int cols=16;
 int colors[][3] = {
   {255,0,255}, // magenta
   {0,0,255}, //blue
@@ -41,12 +42,9 @@ byte numeros[][33] = {
   {16, 17, 18, 32, 34, 48, 50, 64, 66, 80, 81, 82, 96, 97, 98, 112, 113, 114, 128, 130, 144, 146, 160, 162, 176, 177, 178}, //8
   {16, 17, 18, 32, 34, 48, 50, 64, 66, 80, 81, 82, 98, 114, 130, 146, 162, 178} //9
 };
-int separadorMas[] = {215, 230, 231, 232, 247};
-int separadorDash[] = {230, 231, 232};
-int separadorBackSlash[] = {214, 231, 248};
-int separadorPipe[] = {215, 231, 247};
-int separadorSlash[] = {216, 231, 246};
-int separadorX[] = {214, 216, 231, 246, 248};
+
+int letraAncho = 3;
+int espacioEntreNumeros = 1;
 
 Adafruit_NeoPixel tira = Adafruit_NeoPixel(nleds, 3, NEO_GRB + NEO_KHZ800); // Pin 3 de Arduino salida de datos
 
@@ -84,8 +82,8 @@ void apagarLeds() {
 
 void loop() {
   for (int c = 1; c< 90; ++c) { //90 secs
-      encenderColumna(c%10, 13);
-      encenderColumna(((c/10)%10), 9);
+      encenderColumna(c%10, (cols - letraAncho));
+      encenderColumna(((c/10)%10), (cols - (2 * letraAncho) - espacioEntreNumeros));
       tira.show();
       delay(950);
       apagarLeds();
