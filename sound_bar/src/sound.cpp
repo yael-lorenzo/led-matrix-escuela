@@ -193,7 +193,7 @@ void drawPeakDot(int colToRemainFixed) {
   if(peak > 0 && peak <= N_PIXELS - 1){
     //newPixel = 240 - (16 * peak);
     int newPixel = TOTAL_PIXELS - (COL_HEIGHT * peak) - 1;
-    for (int col = 0; col < colToRemainFixed - 1; col++) { //colToRemainFixed - 1 => Shift the history to the left without the peak (does not look good)
+    for (int col = 0; col < colToRemainFixed; col++) {
       strip.setPixelColor(newPixel - col, Wheel(map(peak,0,COL_HEIGHT - 1,30,150)));
     }
   }
@@ -201,7 +201,7 @@ void drawPeakDot(int colToRemainFixed) {
 
 /////////// VU1 BEGINS ////////////
 
-void Vu1(int colToRemainFixed) {
+void Vu1(int colToRemainFixed, int peakInFirstColumn) {
 
   // Places de sound meter in the last two led columns from the right
   // Shift the history to the left without the peak (does not look good)
@@ -232,7 +232,7 @@ void Vu1(int colToRemainFixed) {
 
   displayMainStreamOnRightSide(height, colToRemainFixed);
 
-  drawPeakDot(colToRemainFixed);
+  drawPeakDot(colToRemainFixed - peakInFirstColumn); //colToRemainFixed - 1 => Shift the history to the left without the peak (does not look good)
 
   strip.show(); // Update strip
 
@@ -274,7 +274,7 @@ void Vu1(int colToRemainFixed) {
 /////////// VU0 BEGINS ////////////
 void Vu0() {
   // This mode uses all the screen as a sound meter
-  Vu1(16);
+  Vu1(16, 0);
   //a = 0;
 }
 /////////// VU0 ENDS ////////////
@@ -317,7 +317,15 @@ void loop() {
       break;
 
     case 2:
-      Vu1(0);
+      Vu1(0, 1);
+      break;
+
+    case 3:
+      Vu1(0, 0);
+      break;
+
+    default:
+      lastButtonState = 0;
       break;
   }
 }
