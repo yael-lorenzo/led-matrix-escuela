@@ -3,8 +3,7 @@
 #include <FastLED.h>
 #include <math.h>
 #include <SoftwareSerial.h>
-#define N_PIXELS 16  // Number of pixels in strand
-#define COL_HEIGHT 16 // Height of the pixel column
+#define COL_HEIGHT 16 // Height of the column by number of leds
 #define TOTAL_PIXELS 256  // Total pixels in the screen
 #define MIC_PIN   A0  // Microphone is attached to this analog pin
 #define LED_PIN    6  // NeoPixel LED strand is connected to this pin
@@ -13,7 +12,7 @@
 #define DC_OFFSET  0  // DC offset in mic signal - if unusure, leave 0
 #define NOISE     10  // Noise/hum/interference in mic signal
 #define SAMPLES   6  // 60 Length of buffer for dynamic level adjustment 60
-#define TOP       (N_PIXELS + 2) // Allow dot to go slightly off scale
+#define TOP       (COL_HEIGHT + 2) // Allow dot to go slightly off scale
 #if FASTLED_VERSION < 3001000
 #error "Requires FastLED 3.1 or later; check github for latest code."
 #endif
@@ -190,7 +189,7 @@ void displayMainStreamOnRightSide(int height, int colToRemainFixed) {
 
 void drawPeakDot(int colToRemainFixed) {
   // Draw peak dot
-  if(peak > 0 && peak <= N_PIXELS - 1){
+  if(peak > 0 && peak <= COL_HEIGHT - 1){
     //newPixel = 240 - (16 * peak);
     int newPixel = TOTAL_PIXELS - (COL_HEIGHT * peak) - 1;
     for (int col = 0; col < colToRemainFixed; col++) {
