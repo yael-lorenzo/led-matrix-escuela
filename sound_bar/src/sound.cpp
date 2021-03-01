@@ -3,16 +3,16 @@
 #include <FastLED.h>
 #include <math.h>
 #include <SoftwareSerial.h>
-#define COL_HEIGHT 16 // Height of the column by number of leds
-#define TOTAL_PIXELS 256  // Total pixels in the screen
-#define MIC_PIN   A0  // Microphone is attached to this analog pin
-#define LED_PIN    6  // NeoPixel LED strand is connected to this pin
-#define BUTTON_PIN  5     // the number of the pushbutton pin to rotate the effects
-#define PEAK_FALL 15 //Rate of falling peak dot
-#define DC_OFFSET  0  // DC offset in mic signal - if unusure, leave 0
-#define NOISE     10  // Noise/hum/interference in mic signal
-#define SAMPLES   6  // 60 Length of buffer for dynamic level adjustment 60
-#define TOP       (COL_HEIGHT + 2) // Allow dot to go slightly off scale
+#define COL_HEIGHT   16             // Height of the column by number of leds
+#define TOTAL_PIXELS 256            // Total pixels in the screen
+#define MIC_PIN      A0             // Microphone is attached to this analog pin
+#define LED_PIN      6              // NeoPixel LED strand is connected to this pin
+#define BUTTON_PIN   5              // the number of the pushbutton pin to rotate the effects
+#define PEAK_FALL    15             // Rate of falling peak dot
+#define DC_OFFSET    0              // DC offset in mic signal - if unusure, leave 0
+#define NOISE        10             // Noise/hum/interference in mic signal
+#define SAMPLES      6              // 60 Length of buffer for dynamic level adjustment 60
+#define TOP       (COL_HEIGHT + 2)  // Allow dot to go slightly off scale
 #if FASTLED_VERSION < 3001000
 #error "Requires FastLED 3.1 or later; check github for latest code."
 #endif
@@ -26,102 +26,30 @@ int BRIGHTNESS_MAX = 30;
 int brightness = 10;
 
 
-byte
-//  peak      = 0,      // Used for falling dot
-//  dotCount  = 0,      // Frame counter for delaying dot-falling speed
-  volCount  = 0;      // Frame counter for storing past volume data
+byte volCount  = 0;      // Frame counter for storing past volume data
 int
-  reading,
   vol[SAMPLES],       // Collection of prior volume samples
   lvl       = 2,      // Current "dampened" audio level
   minLvlAvg = 0,      // For dynamic adjustment of graph low & high
   maxLvlAvg = 512;
-float
-  greenOffset = 30,
-  blueOffset = 150;
-// cycle variables
 
-int CYCLE_MIN_MILLIS = 2;
-int CYCLE_MAX_MILLIS = 1000;
-int cycleMillis = 20;
-bool paused = false;
-long lastTime = 0;
-bool boring = true;
-bool gReverseDirection = false;
-int          myhue =   0;
-//Vu ripple
-uint8_t colour;
-uint8_t myfade = 255;                                         // Starting brightness.
-#define maxsteps 6                                           // 16 Case statement wouldn't allow a variable.
-int peakspersec = 0;
-int peakcount = 0;
-uint8_t bgcol = 0;
-int thisdelay = 20;
-uint8_t max_bright = 255;
-
-
-unsigned int sample;
-
-//Samples
-#define NSAMPLES 64
-unsigned int samplearray[NSAMPLES];
-unsigned long samplesum = 0;
-unsigned int sampleavg = 0;
-int samplecount = 0;
-//unsigned int sample = 0;
-unsigned long oldtime = 0;
-unsigned long newtime = 0;
-
-//Ripple variables
-int color;
-int center = 0;
-int step = -1;
-int maxSteps = 6;  //16
-float fadeRate = 0.80;
-int diff;
-
-//Vu 8 variables
-int
-  origin = 0,
-  color_wait_count = 0,
-  last_intensity = 0,
-  intensity_max = 0,
-  origin_at_flip = 0;
-boolean
-  growing = false,
-  fall_from_left = true;
-
-
-
-//background color
-uint32_t currentBg = random(256);
-uint32_t nextBg = currentBg;
-TBlendType    currentBlending;
-
- //Variables will change:
-int buttonPushCounter = 0;   // counter for the number of button presses
-int buttonState = 0;         // current state of the button
+int buttonPushCounter = 0;  // counter for the number of button presses
+int buttonState = 0;        // current state of the button
 int lastButtonState = 0;
-
-
-    byte peak = 6;      // 16  Peak level of column; used for falling dots
-//    unsigned int sample;
-
-    byte dotCount = 0;  //Frame counter for peak dot
-    byte dotHangCount = 0; //Frame counter for holding peak dot
+byte peak = 6;              // 16  Peak level of column; used for falling dots
+byte dotCount = 0;          //Frame counter for peak dot
+byte dotHangCount = 0;      //Frame counter for holding peak dot
 
 void setup() {
 
-  //analogReference(EXTERNAL);
   pinMode(BUTTON_PIN, INPUT);
   //initialize the BUTTON_PIN as output
   digitalWrite(BUTTON_PIN, HIGH);
 
-  // Serial.begin(9600);
   strip.begin();
   strip.show(); // all pixels to 'off'
 
-  Serial.begin(57600);
+  //Serial.begin(57600);
   delay(3000);
 
  }
@@ -169,52 +97,52 @@ void shiftDisplayToLeft(uint8_t columnLimit) {
   }
 }
 
-void displayMainStreamOnRightSide(int height, int colToRemainFixed) {
+void displayMainStreamOnRightSide(int height, int numberOfColsToFix) {
   // Color pixels based on rainbow gradient
-  for(uint8_t i = 0; i < COL_HEIGHT; i++) {
+  for (uint8_t i = 0; i < COL_HEIGHT; i++) {
     // newPixel = 240 - (16 * i);
     int newPixel = TOTAL_PIXELS - (COL_HEIGHT * i) - 1;
     if(i >= height) {
-      for (int col = 0; col < colToRemainFixed; col++){
+      for (int col = 0; col < numberOfColsToFix; col++){
         strip.setPixelColor(newPixel - col, 0, 0, 0);
       }
     }
     else {
-        for (uint8_t col = 0; col < colToRemainFixed; col++){
+        for (uint8_t col = 0; col < numberOfColsToFix; col++){
           strip.setPixelColor(newPixel - col, Wheel(map(i, 0, COL_HEIGHT - 1, 30, 150)));
         }
     }
   }
 }
 
-void drawPeakDot(int colToRemainFixed) {
+void drawPeakDotRightToLeft(int numberOfColsToFix) {
   // Draw peak dot
   if(peak > 0 && peak <= COL_HEIGHT - 1){
     //newPixel = 240 - (16 * peak);
     int newPixel = TOTAL_PIXELS - (COL_HEIGHT * peak) - 1;
-    for (int col = 0; col < colToRemainFixed; col++) {
+    for (int col = 0; col < numberOfColsToFix; col++) {
       strip.setPixelColor(newPixel - col, Wheel(map(peak,0,COL_HEIGHT - 1,30,150)));
     }
   }
 }
 
-/////////// VU1 BEGINS ////////////
+/////////// ModeRightToLeft BEGINS ////////////
 
-void Vu1(int colToRemainFixed, int peakInFirstColumn) {
+void ModeRightToLeft(int numberOfColsToFix, int numberOfColsToDrawPeak) {
 
   // Places de sound meter in the last two led columns from the right
   // Shift the history to the left without the peak (does not look good)
-  if (colToRemainFixed == 0)
-    colToRemainFixed = 3;
+  if (numberOfColsToFix == 0)
+    numberOfColsToFix = 3;
 
   uint8_t  i;
   int minLvl, maxLvl;
   int      n, height;
 
   n   = analogRead(MIC_PIN);
-  n   = abs(n - 512 - DC_OFFSET); // Center on zero
-  n   = (n <= NOISE) ? 0 : (n - NOISE);             // Remove noise/hum
-  lvl = ((lvl * 7) + n) >> 3;    // "Dampened" reading (else looks twitchy)
+  n   = abs(n - 512 - DC_OFFSET);         // Center on zero
+  n   = (n <= NOISE) ? 0 : (n - NOISE);   // Remove noise/hum
+  lvl = ((lvl * 7) + n) >> 3;             // "Dampened" reading (else looks twitchy)
 
   // Calculate bar height based on dynamic min/max levels (fixed point):
   height = TOP * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
@@ -227,11 +155,11 @@ void Vu1(int colToRemainFixed, int peakInFirstColumn) {
   if (height > peak)
     peak   = height; // Keep 'peak' dot at top
 
-  shiftDisplayToLeft(colToRemainFixed);
+  shiftDisplayToLeft(numberOfColsToFix);
 
-  displayMainStreamOnRightSide(height, colToRemainFixed);
+  displayMainStreamOnRightSide(height, numberOfColsToFix);
 
-  drawPeakDot(colToRemainFixed - peakInFirstColumn); //colToRemainFixed - 1 => Shift the history to the left without the peak (does not look good)
+  drawPeakDotRightToLeft(numberOfColsToDrawPeak); //numberOfColsToFix - 1 => Shift the history to the left without the peak (does not look good)
 
   strip.show(); // Update strip
 
@@ -268,19 +196,11 @@ void Vu1(int colToRemainFixed, int peakInFirstColumn) {
 
 }
 
-/////////// VU1 ENDS ////////////
-
-/////////// VU0 BEGINS ////////////
-void Vu0() {
-  // This mode uses all the screen as a sound meter
-  Vu1(16, 0);
-  //a = 0;
-}
-/////////// VU0 ENDS ////////////
+/////////// ModeRightToLeft ENDS ////////////
 
 // List of patterns to cycle through.  Each is defined as a separate function below.
 typedef void (*SimplePatternList[])();
-// SimplePatternList qPatterns = {Vu0, Vu1};
+// SimplePatternList qPatterns = {Mode0_allBarsAsOne, ModeRightToLeft};
 uint8_t qCurrentPatternNumber = 0; // Index number of which pattern is current
 
 void loop() {
@@ -291,19 +211,7 @@ void loop() {
   if (buttonState != lastButtonState) {
     // if the state has changed, increment the counter
     if (buttonState == HIGH) {
-      // if the current state is HIGH then the button
-      // wend from off to on:
       buttonPushCounter++;
-      Serial.println("on");
-      Serial.print("number of button pushes:  ");
-      Serial.println(buttonPushCounter);
-      if(buttonPushCounter==16) {
-      buttonPushCounter=1;}
-    }
-    else {
-      // if the current state is LOW then the button
-      // wend from on to off:
-      Serial.println("off");
     }
   }
   // save the current state as the last state,
@@ -312,15 +220,23 @@ void loop() {
 
   switch (buttonPushCounter){
     case 1:
-      Vu0();
+      // This mode uses the 16 columns of the screen as ONE sound meter
+      // places the peak in all the bars
+      ModeRightToLeft(16, 16);
       break;
 
     case 2:
-      Vu1(0, 1);
+      // This mode uses the last 3 columns of the screen as ONE sound meter
+      // places the peak in the last TWO bars
+      // display the history to the leaft without the peak
+      ModeRightToLeft(3, 2);
       break;
 
     case 3:
-      Vu1(0, 0);
+      // This mode uses the last 3 columns of the screen as ONE sound meter
+      // places the peak on the 3
+      // display the history to the leaft with the peak
+      ModeRightToLeft(3, 3);
       break;
 
     default:
